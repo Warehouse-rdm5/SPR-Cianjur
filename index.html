@@ -197,36 +197,51 @@
              document.getElementById('binCode').value = '';
           } 
           
-          // 2. FITUR BARU: LOGIKA INPUT MID JIKA BIN 03, 04, 05 TIDAK ADA DI SISTEM
+          // 2. LOGIKA BARU: INPUT MID JIKA BIN 03, 04, 05 TIDAK ADA DI SISTEM
           else if (response.status === 'bin_not_found_030405') {
              Swal.fire({
-               title: `<span style="font-weight: 900; font-size: 1.25rem;">Bin <b style="color: #d32f2f;">${response.bin}</b> Kosong di Sistem</span>`,
+               title: `<span style="font-weight: 900; font-size: 1.25rem;">Bin <b style="color: #d32f2f;">${response.bin}</b> Tidak Ada di Sistem</span>`,
                html: `
                  <div style="background: #fffbeb; border: 1.5px solid #fde68a; padding: 14px; border-radius: 12px; margin-bottom: 15px; font-size: 0.95rem; text-align: left; color: #b45309; line-height: 1.4;">
-                   📍 Bin ini belum terdaftar di <b>Available Stock</b>. Jika fisik barang ditemukan, silakan tambahkan data MID barang tersebut.
+                   📍 Bin ini belum terdaftar di <b>Available Stock</b>. Apakah ada barang fisiknya?
                  </div>
-                 <div style="text-align: left; font-weight: 800; color: #334155; margin-bottom: 8px;">Input MID Barang (Fisik):</div>
-                 <input type="text" id="new_mid_input" class="form-control form-control-lg" placeholder="Contoh: 10014" style="font-weight: 800; font-size: 1.2rem; border-radius: 10px; border: 2px solid #cbd5e1; text-align: center;" autocomplete="off">
+                 
+                 <div class="custom-radio-group" style="margin-bottom: 15px;">
+                   <input type="radio" class="custom-radio-btn" name="new_bin_status" id="nb_isi" value="isi" checked onchange="document.getElementById('new_mid_container').style.display='block'">
+                   <label class="custom-radio-label label-match" for="nb_isi">📦 Ada Barang</label>
+
+                   <input type="radio" class="custom-radio-btn" name="new_bin_status" id="nb_kosong" value="kosong" onchange="document.getElementById('new_mid_container').style.display='none'">
+                   <label class="custom-radio-label label-empty" for="nb_kosong">📭 Bin Kosong</label>
+                 </div>
+
+                 <div id="new_mid_container">
+                   <div style="text-align: left; font-weight: 800; color: #334155; margin-bottom: 8px;">Input MID Barang (Fisik):</div>
+                   <input type="text" id="new_mid_input" class="form-control form-control-lg" placeholder="Contoh: 10014" style="font-weight: 800; font-size: 1.2rem; border-radius: 10px; border: 2px solid #cbd5e1; text-align: center;" autocomplete="off">
+                 </div>
                `,
                showCancelButton: true,
                confirmButtonColor: '#16a34a',
                cancelButtonColor: '#64748b',
-               confirmButtonText: '➕ Tambahkan Barang',
+               confirmButtonText: '💾 Proses Data',
                cancelButtonText: 'Batal',
                width: '95%',
                customClass: { popup: 'rounded-4' },
                preConfirm: () => {
+                 const isKosong = document.getElementById('nb_kosong').checked;
                  const midVal = document.getElementById('new_mid_input').value.trim();
-                 if (!midVal) { Swal.showValidationMessage('⚠️ Kode MID wajib diisi!'); return false; }
-                 return midVal;
+                 if (!isKosong && !midVal) { 
+                   Swal.showValidationMessage('⚠️ Kode MID wajib diisi jika Anda memilih "Ada Barang"!'); 
+                   return false; 
+                 }
+                 return { isKosong: isKosong, mid: midVal };
                }
              }).then(async (result) => {
                if (result.isConfirmed) {
-                  Swal.fire({ title: 'Mencari Data & Menambahkan...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
-                  const addRes = await sendRequest({ action: 'addNewBin', bin: response.bin, mid: result.value });
+                  Swal.fire({ title: 'Memproses Data...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+                  const addRes = await sendRequest({ action: 'addNewBin', bin: response.bin, mid: result.value.mid, isEmpty: result.value.isKosong });
                   if(addRes.status === 'success') { 
                      updateTaskBoard(addRes.stats); 
-                     Swal.fire({ icon: 'success', title: 'Berhasil Ditambahkan!', html: addRes.message, confirmButtonColor: '#16a34a' }); 
+                     Swal.fire({ icon: 'success', title: 'Berhasil!', html: addRes.message, confirmButtonColor: '#16a34a' }); 
                      document.getElementById('binCode').value = ''; 
                   } 
                   else { Swal.fire('Gagal', addRes.message, 'error'); }
