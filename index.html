@@ -118,6 +118,9 @@
         return await res.json();
       }
 
+      // VARIABEL BARU UNTUK MENYIMPAN DATA MASTER
+      let masterDataMids = {};
+
       async function fetchInitialData() {
         const btn = document.getElementById('btnSubmit');
         btn.disabled = true; btn.innerHTML = '⏳ Refreshing...';
@@ -128,6 +131,10 @@
             binList.innerHTML = '';
             data.bins.forEach(b => { let opt = document.createElement('option'); opt.value = b; binList.appendChild(opt); });
             updateTaskBoard(data);
+            
+            // SIMPAN DATA MASTER SAAT REFRESH
+            masterDataMids = data.masterMids || {}; 
+            
             btn.disabled = false; btn.innerHTML = '🔍 Cek Bin Ini';
           }
         } catch (e) { btn.disabled = false; btn.innerHTML = '🔍 Cek Bin Ini (Offline)'; }
@@ -162,7 +169,7 @@
         try {
           const response = await sendRequest({ action: 'checkBin', bin: binVal });
 
-          // 1. LOGIKA POP-UP JIKA SUDAH DIAUDIT
+          // 1. LOGIKA JIKA SUDAH DIAUDIT
           if (response.status === 'already_scanned') {
              function createScannedCard(item, color, icon) {
                return `
@@ -197,7 +204,7 @@
              document.getElementById('binCode').value = '';
           } 
           
-          // 2. LOGIKA BARU: INPUT MID JIKA BIN 03, 04, 05 TIDAK ADA DI SISTEM
+          // 2. LOGIKA BARU: INPUT MID (KEYBOARD ANGKA & LIVE LOOKUP)
           else if (response.status === 'bin_not_found_030405') {
              Swal.fire({
                title: `<span style="font-weight: 900; font-size: 1.25rem;">Bin <b style="color: #d32f2f;">${response.bin}</b> Tidak Ada di Sistem</span>`,
@@ -216,7 +223,8 @@
 
                  <div id="new_mid_container">
                    <div style="text-align: left; font-weight: 800; color: #334155; margin-bottom: 8px;">Input MID Barang (Fisik):</div>
-                   <input type="text" id="new_mid_input" class="form-control form-control-lg" placeholder="Contoh: 10014" style="font-weight: 800; font-size: 1.2rem; border-radius: 10px; border: 2px solid #cbd5e1; text-align: center;" autocomplete="off">
+                   <input type="number" pattern="[0-9]*" inputmode="numeric" id="new_mid_input" class="form-control form-control-lg" placeholder="Contoh: 10014" style="font-weight: 800; font-size: 1.2rem; border-radius: 10px; border: 2px solid #cbd5e1; text-align: center;" autocomplete="off" oninput="liveLookupMID()">
+                   <div id="live_product_name" style="margin-top: 10px; font-size: 0.95rem; font-weight: 700; color: #1e3a8a; min-height: 24px; padding: 8px; background: #eff6ff; border-radius: 8px; border: 1px dashed #bfdbfe; display: none;"></div>
                  </div>
                `,
                showCancelButton: true,
@@ -229,15 +237,21 @@
                preConfirm: () => {
                  const isKosong = document.getElementById('nb_kosong').checked;
                  const midVal = document.getElementById('new_mid_input').value.trim();
+                 
                  if (!isKosong && !midVal) { 
-                   Swal.showValidationMessage('⚠️ Kode MID wajib diisi jika Anda memilih "Ada Barang"!'); 
+                   Swal.showValidationMessage('⚠️ Kode MID wajib diisi!'); 
                    return false; 
                  }
+                 if (!isKosong && midVal && !masterDataMids[midVal]) {
+                   Swal.showValidationMessage('⚠️ MID tidak ditemukan di Master Data!'); 
+                   return false; 
+                 }
+                 
                  return { isKosong: isKosong, mid: midVal };
                }
              }).then(async (result) => {
                if (result.isConfirmed) {
-                  Swal.fire({ title: 'Memproses Data...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
+                  Swal.fire({ title: 'Menambahkan...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
                   const addRes = await sendRequest({ action: 'addNewBin', bin: response.bin, mid: result.value.mid, isEmpty: result.value.isKosong });
                   if(addRes.status === 'success') { 
                      updateTaskBoard(addRes.stats); 
@@ -249,7 +263,7 @@
              });
           }
 
-          // 3. LOGIKA NORMAL (AUDIT POPUP)
+          // 3. LOGIKA NORMAL
           else if (response.type === 'POPUP_LIST') { 
              showAuditListPopup(binVal, response.products, response.suffix); 
           } 
@@ -257,29 +271,34 @@
         } catch (error) { Swal.fire('Error', 'Gagal memproses kode bin.', 'error'); } 
         finally { btn.innerHTML = '🔍 Cek Bin Ini'; btn.disabled = false; }
       }
+B. Tambahkan fungsi baru ini di paling bawah (tepat sebelum </script>):
 
-      function toggleRemark(idx, status, suffix) {
-        const input12 = document.getElementById('remark_'+idx), checkArea345 = document.getElementById('check_area_'+idx);
-        if(status === 'notmatch') {
-            if (['03','04','05'].includes(suffix)) { checkArea345.style.display = 'block'; document.getElementById('verified_'+idx).value = 'false'; } 
-            else { input12.style.display = 'block'; input12.focus(); }
-        } else {
-            if (['03','04','05'].includes(suffix)) { checkArea345.style.display = 'none'; document.getElementById('verified_'+idx).value = 'true'; document.getElementById('stock_status_'+idx).innerHTML = ''; } 
-            else { input12.style.display = 'none'; input12.value = ''; }
+JavaScript
+      // ==========================================================
+      // FITUR BARU: LIVE LOOKUP MID NAMA PRODUK
+      // ==========================================================
+      function liveLookupMID() {
+        const inputVal = document.getElementById('new_mid_input').value.trim();
+        const displayDiv = document.getElementById('live_product_name');
+        
+        if (!inputVal) {
+          displayDiv.style.display = 'none';
+          displayDiv.innerHTML = '';
+          return;
         }
-      }
 
-      async function verifyStock(bin, idx) {
-         const actualMid = document.getElementById('actual_mid_'+idx).value.trim(), statusLabel = document.getElementById('stock_status_'+idx);
-         if (!actualMid) { statusLabel.innerHTML = '<span class="text-danger fw-bold">⚠ Masukkan MID dulu!</span>'; return; }
-         statusLabel.innerHTML = '<span class="text-warning fw-bold">⏳ Mengecek...</span>';
-         try {
-            const checkRes = await sendRequest({ action: 'checkAvailableStock', bin: bin, mid: actualMid });
-            if(checkRes.status === 'success') {
-               statusLabel.innerHTML = '<span class="text-success fw-bold">✔ ' + checkRes.message + '</span>';
-               document.getElementById('verified_'+idx).value = 'true'; document.getElementById('remark_'+idx).value = 'Aktual: ' + actualMid; 
-            } else { statusLabel.innerHTML = '<span class="text-danger fw-bold">✖ ' + checkRes.message + '</span>'; document.getElementById('verified_'+idx).value = 'false'; }
-         } catch (e) { statusLabel.innerHTML = '<span class="text-danger fw-bold">✖ Error.</span>'; }
+        displayDiv.style.display = 'block';
+        if (masterDataMids[inputVal]) {
+          displayDiv.innerHTML = '✅ ' + masterDataMids[inputVal];
+          displayDiv.style.color = '#15803d';
+          displayDiv.style.background = '#f0fdf4';
+          displayDiv.style.borderColor = '#bbf7d0';
+        } else {
+          displayDiv.innerHTML = '❌ MID tidak ditemukan di Master!';
+          displayDiv.style.color = '#b91c1c';
+          displayDiv.style.background = '#fef2f2';
+          displayDiv.style.borderColor = '#fecaca';
+        }
       }
 
       function showAuditListPopup(bin, products, suffix) {
