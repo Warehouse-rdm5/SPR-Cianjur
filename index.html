@@ -318,7 +318,7 @@
       function stopScanner() { if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop().then(ignore => html5QrCode.clear()); }
 
       // ==========================================================
-      // UPDATE: MENGIRIM RESPONSE.PRODUCTS KE POPUP INPUT MID
+      // PERBAIKAN BUG: JEDA WAKTU AGAR POP-UP UPDATE TIDAK LANGSUNG TERTUTUP
       // ==========================================================
       async function handleFormSubmit(e) {
         if(e) e.preventDefault(); document.activeElement.blur();
@@ -334,7 +334,6 @@
              }
 
              let htmlSummary = `<div style="text-align:left; max-height: 50vh; overflow-y: auto; padding-right: 5px;">`;
-             // UPDATE: Menampilkan produk yang belum diaudit
              if(response.summary.unaudited && response.summary.unaudited.length > 0) {
                htmlSummary += `<div style="font-weight: 900; color: #475569; font-size: 0.85rem; margin-bottom: 8px; margin-top: 5px;">⏳ BELUM DIAUDIT</div>`;
                response.summary.unaudited.forEach(item => htmlSummary += createScannedCard(item, '#94a3b8', '⏳'));
@@ -348,7 +347,14 @@
                title: `<span style="font-weight: 900;">Bin <b style="color: #b71c1c;">${response.bin}</b><br>Sudah Diaudit!</span>`, 
                html: htmlSummary, showDenyButton: true, confirmButtonColor: '#64748b', denyButtonColor: '#3b82f6', confirmButtonText: 'Tutup', denyButtonText: '🔄 Update MID Baru', width: '95%' 
              }).then((result) => {
-               if (result.isDenied) { showInputMidPopup(response.bin, response.products); } else { document.getElementById('binCode').value = ''; }
+               if (result.isDenied) { 
+                 // JEDA 300 MILIDETIK AGAR POP-UP BERIKUTNYA TIDAK CRASH DI HP
+                 setTimeout(() => {
+                    showInputMidPopup(response.bin, response.products); 
+                 }, 300);
+               } else { 
+                 document.getElementById('binCode').value = ''; 
+               }
              });
           } 
           else if (response.status === 'bin_not_found_030405') { showInputMidPopup(response.bin, null); }
