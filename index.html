@@ -347,11 +347,11 @@
                title: `<span style="font-weight: 900;">Bin <b style="color: #b71c1c;">${response.bin}</b><br>Sudah Diaudit!</span>`, 
                html: htmlSummary, showDenyButton: true, confirmButtonColor: '#64748b', denyButtonColor: '#3b82f6', confirmButtonText: 'Tutup', denyButtonText: '🔄 Update MID Baru', width: '95%' 
              }).then((result) => {
+               // PERBAIKAN: SET TIMEOUT DITAMBAHKAN DI SINI
                if (result.isDenied) { 
-                 // JEDA 300 MILIDETIK AGAR POP-UP BERIKUTNYA TIDAK CRASH DI HP
                  setTimeout(() => {
                     showInputMidPopup(response.bin, response.products); 
-                 }, 300);
+                 }, 350); 
                } else { 
                  document.getElementById('binCode').value = ''; 
                }
