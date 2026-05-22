@@ -356,22 +356,22 @@
              if(response.summary.empty.length > 0) { htmlSummary += `<div style="font-weight: 900; color: #b45309; font-size: 0.85rem; margin-bottom: 8px; margin-top: 15px;">📭 ITEM KOSONG</div>`; response.summary.empty.forEach(item => htmlSummary += createScannedCard(item, '#eab308', '👻')); }
              htmlSummary += `</div>`;
              
+             // MENGGUNAKAN TOMBOL NATIVE SWEETALERT (DIJAMIN 100% BISA DIKLIK DI HP)
              Swal.fire({ 
                title: `<span style="font-weight: 900;">Bin <b style="color: #b71c1c;">${response.bin}</b><br>Sudah Diaudit!</span>`, 
                html: htmlSummary, 
                showCancelButton: true,
-               showConfirmButton: true, // KITA GUNAKAN TOMBOL UTAMA (CONFIRM)
+               showConfirmButton: true, 
                confirmButtonText: '🔄 Update MID Baru', 
                cancelButtonText: 'Tutup', 
-               confirmButtonColor: '#3b82f6', // Warna biru untuk update
-               cancelButtonColor: '#64748b',  // Warna abu-abu untuk tutup
-               reverseButtons: true, // Menempatkan tombol biru di posisi yang mudah diklik
+               confirmButtonColor: '#3b82f6', 
+               cancelButtonColor: '#64748b',  
+               reverseButtons: true, 
                width: '95%' 
              }).then((result) => {
-               // JIKA TOMBOL BIRU "UPDATE MID BARU" DIKLIK
                if (result.isConfirmed) { 
+                 // Beri jeda agar pop-up tertutup dengan sempurna sebelum memanggil fungsi selanjutnya
                  setTimeout(() => {
-                    // Sistem akan langsung memanggil pop-up Pilihan (Ada Barang / Bin Kosong)
                     showInputMidPopup(response.bin, response.products); 
                  }, 350); 
                } else { 
