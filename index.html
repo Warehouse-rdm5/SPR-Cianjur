@@ -342,10 +342,6 @@
           const response = await sendRequest({ action: 'checkBin', bin: binVal });
 
           if (response.status === 'already_scanned') {
-             // SIMPAN DATA KE VARIABEL GLOBAL UNTUK DIPANGGIL OLEH TOMBOL HTML
-             tempBinUpdate = response.bin;
-             tempProductsUpdate = response.products;
-
              function createScannedCard(item, color, icon) {
                return `<div style="border-left: 6px solid ${color}; border-radius: 8px; padding: 12px; margin-bottom: 10px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.06);"><div style="display: flex; gap: 10px;"><div style="font-size: 1.2rem;">${icon}</div><div><div style="font-weight: 800; color: #1e293b; font-size: 1.05rem; line-height: 1.3; margin-bottom: 4px;">${item.name}</div><div style="color: #64748b; font-size: 0.85rem;">Deskripsi: <b style="color: #0f172a; font-size: 0.95rem;">${item.mid}</b></div>${item.remark ? `<div style="color: #b91c1c; font-size: 0.8rem; font-weight: 700; margin-top: 5px; background: #fef2f2; padding: 4px 8px; border-radius: 4px; display: inline-block;">Ket: ${item.remark}</div>` : ''}</div></div></div>`;
              }
@@ -360,19 +356,28 @@
              if(response.summary.empty.length > 0) { htmlSummary += `<div style="font-weight: 900; color: #b45309; font-size: 0.85rem; margin-bottom: 8px; margin-top: 15px;">📭 ITEM KOSONG</div>`; response.summary.empty.forEach(item => htmlSummary += createScannedCard(item, '#eab308', '👻')); }
              htmlSummary += `</div>`;
              
-             // PERBAIKAN TOTAL: TOMBOL UPDATE KINI DIBUAT DARI HTML MURNI
-             htmlSummary += `<button type="button" class="btn btn-primary w-100 mt-4" style="font-weight: 800; padding: 14px; border-radius: 12px; background-color: #3b82f6; border: none;" onclick="triggerUpdateMidPopup()">🔄 Update MID Baru</button>`;
-             
+             // PERBAIKAN: Menggunakan Tombol Bawaan Sistem agar Klik Selalu Merespons
              Swal.fire({ 
                title: `<span style="font-weight: 900;">Bin <b style="color: #b71c1c;">${response.bin}</b><br>Sudah Diaudit!</span>`, 
                html: htmlSummary, 
-               showDenyButton: false, // Tombol bawaan dimatikan agar tidak crash
-               showConfirmButton: true,
-               confirmButtonColor: '#64748b', 
-               confirmButtonText: 'Tutup', 
-               width: '95%' 
+               showCancelButton: true,       // Menampilkan tombol Batal/Tutup
+               showConfirmButton: false,     // Matikan tombol OK default
+               showDenyButton: true,         // Aktifkan tombol Deny untuk Update
+               cancelButtonColor: '#64748b', 
+               denyButtonColor: '#3b82f6', 
+               cancelButtonText: 'Tutup', 
+               denyButtonText: '🔄 Update MID Baru', 
+               width: '95%',
+               customClass: { actions: 'flex-row-reverse' } // Posisi tombol dibalik
              }).then((result) => {
-               if (result.isConfirmed || result.isDismissed) { 
+               // JIKA TOMBOL UPDATE DIKLIK
+               if (result.isDenied) { 
+                 Swal.close(); // Tutup Pop-up pertama dengan aman
+                 setTimeout(() => {
+                    // Panggil fungsi Update yang memuat daftar Checkbox (Gambar 2)
+                    showInputMidPopup(response.bin, response.products); 
+                 }, 400); 
+               } else { 
                  document.getElementById('binCode').value = ''; 
                }
              });
