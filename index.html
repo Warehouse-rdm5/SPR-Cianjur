@@ -356,27 +356,24 @@
              if(response.summary.empty.length > 0) { htmlSummary += `<div style="font-weight: 900; color: #b45309; font-size: 0.85rem; margin-bottom: 8px; margin-top: 15px;">📭 ITEM KOSONG</div>`; response.summary.empty.forEach(item => htmlSummary += createScannedCard(item, '#eab308', '👻')); }
              htmlSummary += `</div>`;
              
-             // PERBAIKAN: Menggunakan Tombol Bawaan Sistem agar Klik Selalu Merespons
              Swal.fire({ 
                title: `<span style="font-weight: 900;">Bin <b style="color: #b71c1c;">${response.bin}</b><br>Sudah Diaudit!</span>`, 
                html: htmlSummary, 
-               showCancelButton: true,       // Menampilkan tombol Batal/Tutup
-               showConfirmButton: false,     // Matikan tombol OK default
-               showDenyButton: true,         // Aktifkan tombol Deny untuk Update
-               cancelButtonColor: '#64748b', 
-               denyButtonColor: '#3b82f6', 
+               showCancelButton: true,
+               showConfirmButton: true, // KITA GUNAKAN TOMBOL UTAMA (CONFIRM)
+               confirmButtonText: '🔄 Update MID Baru', 
                cancelButtonText: 'Tutup', 
-               denyButtonText: '🔄 Update MID Baru', 
-               width: '95%',
-               customClass: { actions: 'flex-row-reverse' } // Posisi tombol dibalik
+               confirmButtonColor: '#3b82f6', // Warna biru untuk update
+               cancelButtonColor: '#64748b',  // Warna abu-abu untuk tutup
+               reverseButtons: true, // Menempatkan tombol biru di posisi yang mudah diklik
+               width: '95%' 
              }).then((result) => {
-               // JIKA TOMBOL UPDATE DIKLIK
-               if (result.isDenied) { 
-                 Swal.close(); // Tutup Pop-up pertama dengan aman
+               // JIKA TOMBOL BIRU "UPDATE MID BARU" DIKLIK
+               if (result.isConfirmed) { 
                  setTimeout(() => {
-                    // Panggil fungsi Update yang memuat daftar Checkbox (Gambar 2)
+                    // Sistem akan langsung memanggil pop-up Pilihan (Ada Barang / Bin Kosong)
                     showInputMidPopup(response.bin, response.products); 
-                 }, 400); 
+                 }, 350); 
                } else { 
                  document.getElementById('binCode').value = ''; 
                }
