@@ -37,6 +37,10 @@
       .custom-radio-btn:checked + .label-match { background-color: #22c55e; border-color: #22c55e; color: white; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4); }
       .custom-radio-btn:checked + .label-notmatch { background-color: #ef4444; border-color: #ef4444; color: white; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4); }
       .custom-radio-btn:checked + .label-empty { background-color: #f59e0b; border-color: #f59e0b; color: white; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4); }
+
+      /* Styling khusus untuk tombol alternatif jepret foto */
+      #reader button { padding: 10px 20px; background-color: #d32f2f; color: white; border: none; border-radius: 8px; font-weight: bold; margin: 10px 5px; cursor: pointer; }
+      #reader a { color: #d32f2f; font-weight: bold; text-decoration: none; margin-top: 10px; display: inline-block; }
     </style>
   </head>
   <body>
@@ -141,13 +145,12 @@
       </div>
     </div>
 
-    <div class="modal fade" id="scannerModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down">
-        <div class="modal-content">
-          <div class="modal-header border-0"><h5 class="modal-title fw-bold">Arahkan Kamera ke Barcode</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" onclick="stopScanner()"></button></div>
-          <div class="modal-body pt-0"><div id="reader"></div></div>
-        </div>
+    <div id="scannerOverlay" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.95); z-index:99999; flex-direction:column; padding:20px; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h5 style="color:white; margin:0; font-weight:bold;">Arahkan ke Barcode</h5>
+        <button type="button" class="btn btn-danger fw-bold" onclick="stopScanner()">✖ Tutup</button>
       </div>
+      <div id="reader" style="width:100%; background:white; border-radius:12px; padding:15px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);"></div>
     </div>
 
     <script>
@@ -156,8 +159,6 @@
       let appMode = 'SPR'; // Default Mode
 
       document.addEventListener("DOMContentLoaded", function() {
-        scanModal = new bootstrap.Modal(document.getElementById('scannerModal'));
-        document.getElementById('scannerModal').addEventListener('hidden.bs.modal', stopScanner);
       });
 
       function selectMode(mode) {
@@ -259,64 +260,39 @@
       }
 
       // ==========================================================
-      // PERBAIKAN FINAL KAMERA (BRUTE-FORCE NATIVE JAVASCRIPT)
+      // FITUR SCANNER FINAL (DILENGKAPI TOMBOL JEPRET FOTO ALTERNATIF)
       // ==========================================================
-      function openScanner() { 
-        scanModal.show(); 
-        // Berikan visual feedback agar kita tahu script berjalan
-        document.getElementById('reader').innerHTML = '<div style="padding:40px 10px; text-align:center; font-weight:bold; color:#b71c1c; font-size:1.1rem;">Memanggil Kamera...<br><small style="color:#475569; font-size:0.8rem;">Mohon klik "Izinkan" jika muncul pop-up.</small></div>';
-        
-        // Jeda 600ms yang sangat krusial untuk animasi Bootstrap
-        setTimeout(async () => {
-          try {
-            // LANGKAH 1: PAKSA MINTA IZIN DENGAN CORE BROWSER API (Bypass Library)
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-              const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-              // Jika sukses ditembus, langsung matikan pancingan ini
-              stream.getTracks().forEach(track => track.stop()); 
-            }
+      let html5QrcodeScanner; // Gunakan variabel versi Scanner UI
 
-            // LANGKAH 2: Bersihkan kotak dan paksa jalankan mesin Barcode dari awal
-            document.getElementById('reader').innerHTML = '';
-            html5QrCode = new Html5Qrcode("reader"); // Selalu buat instance baru agar tidak nyangkut
-            
-            await html5QrCode.start(
-              { facingMode: "environment" }, 
-              { fps: 20, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 }, 
-              onScanSuccess
-            );
-          } catch (err) {
-             // LANGKAH 3: Jika browser memblokir mati-matian, beri tahu user cara membukanya
-             Swal.fire({
-                icon: 'error',
-                title: 'Kamera Diblokir Browser!',
-                html: `<div style="text-align:left; font-size:0.9rem;">
-                         Browser Anda menolak akses kamera. Sistem kami tidak bisa memaksa lagi. <b>Cara mengatasinya:</b><br><br>
-                         1. Klik ikon <b>Gembok/Pengaturan</b> di kiri atas (sebelah link URL web ini).<br>
-                         2. Pilih <b>Izin (Permissions) / Pengaturan Situs</b>.<br>
-                         3. Ubah Izin Kamera menjadi <b>Izinkan (Allow)</b>.<br>
-                         4. Refresh halaman ini.
-                       </div>`
-              });
-             scanModal.hide();
-          }
-        }, 600); 
+      function openScanner() {
+        // 1. Tampilkan layar hitam overlay
+        document.getElementById('scannerOverlay').style.display = 'flex';
+
+        // 2. Gunakan Html5QrcodeScanner (Versi UI Lengkap)
+        html5QrcodeScanner = new Html5QrcodeScanner(
+          "reader",
+          { fps: 10, qrbox: { width: 250, height: 250 }, rememberLastUsedCamera: true },
+          false // verbose = false
+        );
+
+        // 3. Render scanner ke layar
+        html5QrcodeScanner.render(onScanSuccess, function(errorMessage) {
+            // Biarkan kosong agar console tidak dipenuhi error pencarian frame
+        });
       }
-      
-      function onScanSuccess(decodedText) { 
-        document.getElementById('binCode').value = decodedText; 
-        try { new Audio('https://www.soundjay.com/buttons/sounds/button-3.mp3').play().catch(()=>{}); } catch(e){} 
-        stopScanner(); 
-        scanModal.hide(); 
-        handleFormSubmit(null); 
+
+      function onScanSuccess(decodedText, decodedResult) {
+        document.getElementById('binCode').value = decodedText;
+        try { new Audio('https://www.soundjay.com/buttons/sounds/button-3.mp3').play().catch(()=>{}); } catch(e){}
+        stopScanner();
+        handleFormSubmit(null);
       }
-      
-      function stopScanner() { 
-        try {
-          if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().then(() => { html5QrCode.clear(); }).catch(e => console.log(e)); 
-          }
-        } catch (e) {} 
+
+      function stopScanner() {
+        document.getElementById('scannerOverlay').style.display = 'none';
+        if (html5QrcodeScanner) {
+          html5QrcodeScanner.clear().catch(e => console.log("Gagal mematikan scanner", e));
+        }
       }
 
       async function handleFormSubmit(e) {
