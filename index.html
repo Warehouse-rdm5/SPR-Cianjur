@@ -258,9 +258,54 @@
         }
       }
 
-      function openScanner() { scanModal.show(); html5QrCode = new Html5Qrcode("reader"); html5QrCode.start({ facingMode: "environment" }, { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 }, onScanSuccess); }
-      function onScanSuccess(decodedText) { document.getElementById('binCode').value = decodedText; try { new Audio('https://www.soundjay.com/buttons/sounds/button-3.mp3').play().catch(()=>{}); } catch(e){} stopScanner(); scanModal.hide(); handleFormSubmit(null); }
-      function stopScanner() { if (html5QrCode && html5QrCode.isScanning) html5QrCode.stop().then(ignore => html5QrCode.clear()); }
+      // ==========================================================
+      // PERBAIKAN FITUR KAMERA BARCODE (TIMING & PERMISSION HANDLING)
+      // ==========================================================
+      function openScanner() { 
+        scanModal.show(); 
+        
+        // Beri jeda 400ms agar animasi pop-up Bootstrap selesai terbuka penuh.
+        // Jika tidak dijeda, dimensi #reader akan bernilai 0px dan kamera akan crash.
+        setTimeout(() => {
+          try {
+            if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start(
+              { facingMode: "environment" }, 
+              { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 }, 
+              onScanSuccess
+            ).catch(err => {
+              // Menangkap error jika izin kamera belum diberikan di browser HP
+              Swal.fire({
+                icon: 'error',
+                title: 'Akses Kamera Ditolak',
+                text: 'Gagal mengakses kamera! Pastikan Anda sudah memberikan "Izin Akses Kamera" untuk website ini di pengaturan browser HP Anda.'
+              });
+              scanModal.hide();
+            });
+          } catch (e) {
+             Swal.fire('Error', 'Perangkat tidak mendukung fitur kamera ini.', 'error');
+             scanModal.hide();
+          }
+        }, 400);
+      }
+
+
+      function onScanSuccess(decodedText) { 
+        document.getElementById('binCode').value = decodedText; 
+        try { new Audio('https://www.soundjay.com/buttons/sounds/button-3.mp3').play().catch(()=>{}); } catch(e){} 
+        stopScanner(); 
+        scanModal.hide(); 
+        handleFormSubmit(null); 
+      }
+
+      function stopScanner() { 
+        // Menggunakan blok try-catch agar jika kamera force-close, UI web tidak ikut nge-hang
+        try {
+          if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then(ignore => html5QrCode.clear()).catch(e => console.log(e)); 
+          }
+        } catch (e) {} 
+      }
 
       async function handleFormSubmit(e) {
         if(e) e.preventDefault(); document.activeElement.blur();
