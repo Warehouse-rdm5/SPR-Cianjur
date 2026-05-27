@@ -259,41 +259,48 @@
       }
 
       // ==========================================================
-      // PERBAIKAN FITUR KAMERA BARCODE (MEMAKSA POP-UP IZIN MUNCUL)
+      // PERBAIKAN FINAL KAMERA (BRUTE-FORCE NATIVE JAVASCRIPT)
       // ==========================================================
       function openScanner() { 
         scanModal.show(); 
+        // Berikan visual feedback agar kita tahu script berjalan
+        document.getElementById('reader').innerHTML = '<div style="padding:40px 10px; text-align:center; font-weight:bold; color:#b71c1c; font-size:1.1rem;">Memanggil Kamera...<br><small style="color:#475569; font-size:0.8rem;">Mohon klik "Izinkan" jika muncul pop-up.</small></div>';
         
-        // Jeda 500ms agar pop-up HTML selesai dirender sebelum kamera menyala
-        setTimeout(() => {
-          // LANGKAH 1: Paksa browser memunculkan pop-up izin kamera
-          Html5Qrcode.getCameras().then(devices => {
-             if (devices && devices.length > 0) {
-                // LANGKAH 2: Jika izin diberikan dan kamera ada, nyalakan kamera belakang
-                if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-                
-                html5QrCode.start(
-                  { facingMode: "environment" }, 
-                  { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 }, 
-                  onScanSuccess
-                ).catch(err => {
-                  Swal.fire('Error', 'Gagal merender video kamera.', 'error');
-                  scanModal.hide();
-                });
-             } else {
-                Swal.fire('Error', 'Kamera fisik tidak ditemukan di HP Anda.', 'error');
-                scanModal.hide();
-             }
-          }).catch(err => {
-             // LANGKAH 3: Jika pengguna menolak izin atau browser memblokir otomatis
+        // Jeda 600ms yang sangat krusial untuk animasi Bootstrap
+        setTimeout(async () => {
+          try {
+            // LANGKAH 1: PAKSA MINTA IZIN DENGAN CORE BROWSER API (Bypass Library)
+            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+              const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+              // Jika sukses ditembus, langsung matikan pancingan ini
+              stream.getTracks().forEach(track => track.stop()); 
+            }
+
+            // LANGKAH 2: Bersihkan kotak dan paksa jalankan mesin Barcode dari awal
+            document.getElementById('reader').innerHTML = '';
+            html5QrCode = new Html5Qrcode("reader"); // Selalu buat instance baru agar tidak nyangkut
+            
+            await html5QrCode.start(
+              { facingMode: "environment" }, 
+              { fps: 20, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 }, 
+              onScanSuccess
+            );
+          } catch (err) {
+             // LANGKAH 3: Jika browser memblokir mati-matian, beri tahu user cara membukanya
              Swal.fire({
                 icon: 'error',
-                title: 'Akses Kamera Diblokir',
-                text: 'Browser gagal mengakses kamera. Pastikan Anda menekan "Izinkan" (Allow) atau periksa Pengaturan Situs di browser HP Anda.'
+                title: 'Kamera Diblokir Browser!',
+                html: `<div style="text-align:left; font-size:0.9rem;">
+                         Browser Anda menolak akses kamera. Sistem kami tidak bisa memaksa lagi. <b>Cara mengatasinya:</b><br><br>
+                         1. Klik ikon <b>Gembok/Pengaturan</b> di kiri atas (sebelah link URL web ini).<br>
+                         2. Pilih <b>Izin (Permissions) / Pengaturan Situs</b>.<br>
+                         3. Ubah Izin Kamera menjadi <b>Izinkan (Allow)</b>.<br>
+                         4. Refresh halaman ini.
+                       </div>`
               });
              scanModal.hide();
-          });
-        }, 500);
+          }
+        }, 600); 
       }
       
       function onScanSuccess(decodedText) { 
@@ -307,9 +314,7 @@
       function stopScanner() { 
         try {
           if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().then(() => {
-                html5QrCode.clear();
-            }).catch(e => console.log(e)); 
+            html5QrCode.stop().then(() => { html5QrCode.clear(); }).catch(e => console.log(e)); 
           }
         } catch (e) {} 
       }
