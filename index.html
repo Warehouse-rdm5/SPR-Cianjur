@@ -155,11 +155,8 @@
 
     <script>
       const API_URL = "https://script.google.com/macros/s/AKfycbwPv_vB9XaSIV3fHZ34HZTi4Qa1MxNfH2nz20_pi7nd7xT0eKzoO04IIT5LdkZDOfeMvw/exec"; 
-      let html5QrCode, scanModal, masterDataMids = {};
+      let html5QrCode, masterDataMids = {};
       let appMode = 'SPR'; // Default Mode
-
-      document.addEventListener("DOMContentLoaded", function() {
-      });
 
       function selectMode(mode) {
         appMode = mode;
@@ -260,32 +257,27 @@
       }
 
       // ==========================================================
-      // FITUR SCANNER FINAL (DILENGKAPI TOMBOL JEPRET FOTO ALTERNATIF)
+      // FITUR LIVE SCANNER (UI BAWAAN LIBRARY LENGKAP)
       // ==========================================================
-      let html5QrcodeScanner; // Gunakan variabel versi Scanner UI
-
-      let html5QrCode; // Menggunakan Native API, bukan versi UI
+      let html5QrcodeScanner; // Menggunakan versi Scanner UI Bawaan
 
       function openScanner() {
-        // Tampilkan layar hitam overlay
+        // 1. Tampilkan layar hitam overlay
         document.getElementById('scannerOverlay').style.display = 'flex';
-
-        // Buat instance scanner
-        if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
-
-        // Langsung paksa akses kamera belakang (environment)
-        html5QrCode.start(
-          { facingMode: "environment" }, 
-          { fps: 15, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 }, 
-          onScanSuccess
-        ).catch(err => {
-          Swal.fire({
-            icon: 'error',
-            title: 'Kamera Gagal Diakses',
-            text: 'Izin kamera diblokir atau browser tidak mendukung fitur ini.'
+        
+        // 2. Buat instance Live Scanner (hanya jika belum ada)
+        if (!html5QrcodeScanner) {
+          html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader",
+            { fps: 15, qrbox: { width: 250, height: 250 }, rememberLastUsedCamera: true },
+            false // Atur ke true jika ingin melihat log error di console
+          );
+          
+          // 3. Render UI Scanner ke dalam div #reader
+          html5QrcodeScanner.render(onScanSuccess, function(errorMessage) {
+             // Dibiarkan kosong agar console tidak dipenuhi pesan pencarian frame
           });
-          stopScanner();
-        });
+        }
       }
 
       function onScanSuccess(decodedText) {
@@ -297,11 +289,12 @@
 
       function stopScanner() {
         document.getElementById('scannerOverlay').style.display = 'none';
-        try {
-          if (html5QrCode && html5QrCode.isScanning) {
-            html5QrCode.stop().then(ignore => html5QrCode.clear()).catch(e => console.log(e));
-          }
-        } catch(e) {}
+        if (html5QrcodeScanner) {
+          html5QrcodeScanner.clear().then(() => {
+             // Reset variabel agar UI ter-refresh jika tombol ditekan lagi nanti
+             html5QrcodeScanner = null; 
+          }).catch(e => console.log("Gagal mematikan scanner", e));
+        }
       }
 
       async function handleFormSubmit(e) {
