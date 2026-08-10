@@ -322,8 +322,21 @@
                if (result.isConfirmed) { setTimeout(() => { showInputMidPopup(response.bin, response.products); }, 350); } else { document.getElementById('binCode').value = ''; }
              });
           } 
-          else if (response.status === 'bin_not_found_030405') { showInputMidPopup(response.bin, null); }
+          else if (response.status === 'bin_not_found_stock') { showInputMidPopup(response.bin, null); }
           else if (response.type === 'POPUP_LIST') { showAuditListPopup(binVal, response.products, response.suffix); } 
+          
+          // --- PERBAIKAN: Menangkap status not_found untuk dimunculkan sebagai Info ---
+          else if (response.status === 'not_found') {
+             Swal.fire({
+                 icon: 'info',
+                 title: response.title,
+                 html: response.message,
+                 confirmButtonColor: '#3b82f6'
+             });
+             document.getElementById('binCode').value = '';
+          }
+          // ----------------------------------------------------------------------------
+          
           else { Swal.fire('Error!', response.message, 'error'); }
         } catch (error) { Swal.fire('Error', 'Gagal terhubung ke Database.', 'error'); } 
         finally { btn.innerHTML = '🔍 Cek Bin Ini'; btn.disabled = false; }
