@@ -422,8 +422,20 @@
         }).then(async (result) => {
           if (result.isConfirmed) {
              Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
-             const saveRes = await sendRequest({ action: 'submitBinAudit', bin: bin, auditData: result.value });
-             if(saveRes.status === 'success') { updateTaskBoard(saveRes.stats); Swal.fire('Tersimpan!', saveRes.message, 'success'); document.getElementById('binCode').value = ''; } else { Swal.fire('Gagal', saveRes.message, 'error'); }
+             
+             // PERBAIKAN: Try Catch pengaman loading muter terus
+             try {
+                 const saveRes = await sendRequest({ action: 'submitBinAudit', bin: bin, auditData: result.value });
+                 if(saveRes.status === 'success') { 
+                     updateTaskBoard(saveRes.stats); 
+                     Swal.fire('Tersimpan!', saveRes.message, 'success'); 
+                     document.getElementById('binCode').value = ''; 
+                 } else { 
+                     Swal.fire('Gagal', saveRes.message, 'error'); 
+                 }
+             } catch(err) {
+                 Swal.fire('Error Server', 'Terjadi kesalahan sistem atau baris data penuh. Silakan coba lagi.', 'error');
+             }
           }
         });
       }
@@ -510,9 +522,20 @@
         }).then(async (result) => {
            if (result.isConfirmed) {
               Swal.fire({ title: 'Memproses Data...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
-              const res = await sendRequest({ action: 'processMaintainBin', bin: bin, maintainData: result.value });
-              if(res.status === 'success') { updateTaskBoard(res.stats); Swal.fire({ icon: 'success', title: 'Berhasil!', html: res.message, confirmButtonColor: '#16a34a' }); document.getElementById('binCode').value = ''; }
-              else { Swal.fire('Gagal', res.message, 'error'); }
+              
+              // PERBAIKAN: Try Catch pengaman loading muter terus
+              try {
+                  const res = await sendRequest({ action: 'processMaintainBin', bin: bin, maintainData: result.value });
+                  if(res.status === 'success') { 
+                      updateTaskBoard(res.stats); 
+                      Swal.fire({ icon: 'success', title: 'Berhasil!', html: res.message, confirmButtonColor: '#16a34a' }); 
+                      document.getElementById('binCode').value = ''; 
+                  } else { 
+                      Swal.fire('Gagal', res.message, 'error'); 
+                  }
+              } catch(err) {
+                  Swal.fire('Error Server', 'Terjadi kesalahan sistem atau baris data penuh. Silakan coba lagi.', 'error');
+              }
            } else { document.getElementById('binCode').value = ''; }
         });
       }
@@ -538,9 +561,20 @@
         }).then(async (result) => {
           if (result.isConfirmed) {
              Swal.fire({ title: 'Menambahkan Baris Baru...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
-             const addRes = await sendRequest({ action: 'addNewBin', bin: bin, mid: result.value.mid, isEmpty: false, emptyRows: [], actionMode: 'append' });
-             if(addRes.status === 'success') { updateTaskBoard(addRes.stats); Swal.fire({ icon: 'success', title: 'Berhasil!', html: addRes.message, confirmButtonColor: '#16a34a' }); document.getElementById('binCode').value = ''; } 
-             else { Swal.fire('Gagal', addRes.message, 'error'); }
+             
+             // PERBAIKAN: Try Catch pengaman loading muter terus
+             try {
+                 const addRes = await sendRequest({ action: 'addNewBin', bin: bin, mid: result.value.mid, isEmpty: false, emptyRows: [], actionMode: 'append' });
+                 if(addRes.status === 'success') { 
+                     updateTaskBoard(addRes.stats); 
+                     Swal.fire({ icon: 'success', title: 'Berhasil!', html: addRes.message, confirmButtonColor: '#16a34a' }); 
+                     document.getElementById('binCode').value = ''; 
+                 } else { 
+                     Swal.fire('Gagal', addRes.message, 'error'); 
+                 }
+             } catch(err) {
+                 Swal.fire('Error Server', 'Terjadi kesalahan sistem atau baris data penuh. Silakan coba lagi.', 'error');
+             }
           }
         });
       }
