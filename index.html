@@ -213,8 +213,11 @@
         try {
           const data = await sendRequest({ action: 'init' });
           if(data.status === 'success') {
-            const binList = document.getElementById('binList'); binList.innerHTML = '';
-            data.bins.forEach(b => { let opt = document.createElement('option'); opt.value = b; binList.appendChild(opt); });
+            
+            // PERBAIKAN: Menghapus pembuatan ribuan DOM yang membuat HP Freeze
+            const binList = document.getElementById('binList'); 
+            if(binList) binList.innerHTML = '';
+            
             updateTaskBoard(data);
             masterDataMids = data.masterMids || {}; 
             btn.disabled = false; btn.innerHTML = '🔍 Cek Bin Ini';
