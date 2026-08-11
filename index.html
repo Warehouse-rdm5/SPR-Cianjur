@@ -158,7 +158,7 @@
     </div>
 
     <script>
-      const API_URL = "https://script.google.com/macros/s/AKfycbzBJ9hz5KHx7ERLp5g615xm-Dj44lwdVPA_hAcctjjIE05VN4CVXDVn3mNskvh8OmmRGQ/exec"; 
+      const API_URL = "https://script.google.com/macros/s/AKfycbwPv_vB9XaSIV3fHZ34HZTi4Qa1MxNfH2nz20_pi7nd7xT0eKzoO04IIT5LdkZDOfeMvw/exec"; 
       let html5QrCode, scanModal, masterDataMids = {};
       let appMode = 'SPR'; // Default Mode
 
@@ -213,11 +213,8 @@
         try {
           const data = await sendRequest({ action: 'init' });
           if(data.status === 'success') {
-            
-            // PERBAIKAN: Menghapus pembuatan ribuan DOM yang membuat HP Freeze
-            const binList = document.getElementById('binList'); 
-            if(binList) binList.innerHTML = '';
-            
+            const binList = document.getElementById('binList'); binList.innerHTML = '';
+            data.bins.forEach(b => { let opt = document.createElement('option'); opt.value = b; binList.appendChild(opt); });
             updateTaskBoard(data);
             masterDataMids = data.masterMids || {}; 
             btn.disabled = false; btn.innerHTML = '🔍 Cek Bin Ini';
@@ -325,21 +322,8 @@
                if (result.isConfirmed) { setTimeout(() => { showInputMidPopup(response.bin, response.products); }, 350); } else { document.getElementById('binCode').value = ''; }
              });
           } 
-          else if (response.status === 'bin_not_found_stock') { showInputMidPopup(response.bin, null); }
+          else if (response.status === 'bin_not_found_030405') { showInputMidPopup(response.bin, null); }
           else if (response.type === 'POPUP_LIST') { showAuditListPopup(binVal, response.products, response.suffix); } 
-          
-          // --- PERBAIKAN: Menangkap status not_found untuk dimunculkan sebagai Info ---
-          else if (response.status === 'not_found') {
-             Swal.fire({
-                 icon: 'info',
-                 title: response.title,
-                 html: response.message,
-                 confirmButtonColor: '#3b82f6'
-             });
-             document.getElementById('binCode').value = '';
-          }
-          // ----------------------------------------------------------------------------
-          
           else { Swal.fire('Error!', response.message, 'error'); }
         } catch (error) { Swal.fire('Error', 'Gagal terhubung ke Database.', 'error'); } 
         finally { btn.innerHTML = '🔍 Cek Bin Ini'; btn.disabled = false; }
@@ -425,20 +409,8 @@
         }).then(async (result) => {
           if (result.isConfirmed) {
              Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
-             
-             // PERBAIKAN: Try Catch pengaman loading muter terus
-             try {
-                 const saveRes = await sendRequest({ action: 'submitBinAudit', bin: bin, auditData: result.value });
-                 if(saveRes.status === 'success') { 
-                     updateTaskBoard(saveRes.stats); 
-                     Swal.fire('Tersimpan!', saveRes.message, 'success'); 
-                     document.getElementById('binCode').value = ''; 
-                 } else { 
-                     Swal.fire('Gagal', saveRes.message, 'error'); 
-                 }
-             } catch(err) {
-                 Swal.fire('Error Server', 'Terjadi kesalahan sistem atau baris data penuh. Silakan coba lagi.', 'error');
-             }
+             const saveRes = await sendRequest({ action: 'submitBinAudit', bin: bin, auditData: result.value });
+             if(saveRes.status === 'success') { updateTaskBoard(saveRes.stats); Swal.fire('Tersimpan!', saveRes.message, 'success'); document.getElementById('binCode').value = ''; } else { Swal.fire('Gagal', saveRes.message, 'error'); }
           }
         });
       }
@@ -525,20 +497,9 @@
         }).then(async (result) => {
            if (result.isConfirmed) {
               Swal.fire({ title: 'Memproses Data...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
-              
-              // PERBAIKAN: Try Catch pengaman loading muter terus
-              try {
-                  const res = await sendRequest({ action: 'processMaintainBin', bin: bin, maintainData: result.value });
-                  if(res.status === 'success') { 
-                      updateTaskBoard(res.stats); 
-                      Swal.fire({ icon: 'success', title: 'Berhasil!', html: res.message, confirmButtonColor: '#16a34a' }); 
-                      document.getElementById('binCode').value = ''; 
-                  } else { 
-                      Swal.fire('Gagal', res.message, 'error'); 
-                  }
-              } catch(err) {
-                  Swal.fire('Error Server', 'Terjadi kesalahan sistem atau baris data penuh. Silakan coba lagi.', 'error');
-              }
+              const res = await sendRequest({ action: 'processMaintainBin', bin: bin, maintainData: result.value });
+              if(res.status === 'success') { updateTaskBoard(res.stats); Swal.fire({ icon: 'success', title: 'Berhasil!', html: res.message, confirmButtonColor: '#16a34a' }); document.getElementById('binCode').value = ''; }
+              else { Swal.fire('Gagal', res.message, 'error'); }
            } else { document.getElementById('binCode').value = ''; }
         });
       }
@@ -564,20 +525,9 @@
         }).then(async (result) => {
           if (result.isConfirmed) {
              Swal.fire({ title: 'Menambahkan Baris Baru...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); }});
-             
-             // PERBAIKAN: Try Catch pengaman loading muter terus
-             try {
-                 const addRes = await sendRequest({ action: 'addNewBin', bin: bin, mid: result.value.mid, isEmpty: false, emptyRows: [], actionMode: 'append' });
-                 if(addRes.status === 'success') { 
-                     updateTaskBoard(addRes.stats); 
-                     Swal.fire({ icon: 'success', title: 'Berhasil!', html: addRes.message, confirmButtonColor: '#16a34a' }); 
-                     document.getElementById('binCode').value = ''; 
-                 } else { 
-                     Swal.fire('Gagal', addRes.message, 'error'); 
-                 }
-             } catch(err) {
-                 Swal.fire('Error Server', 'Terjadi kesalahan sistem atau baris data penuh. Silakan coba lagi.', 'error');
-             }
+             const addRes = await sendRequest({ action: 'addNewBin', bin: bin, mid: result.value.mid, isEmpty: false, emptyRows: [], actionMode: 'append' });
+             if(addRes.status === 'success') { updateTaskBoard(addRes.stats); Swal.fire({ icon: 'success', title: 'Berhasil!', html: addRes.message, confirmButtonColor: '#16a34a' }); document.getElementById('binCode').value = ''; } 
+             else { Swal.fire('Gagal', addRes.message, 'error'); }
           }
         });
       }
